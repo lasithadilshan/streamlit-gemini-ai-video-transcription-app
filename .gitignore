@@ -1,0 +1,52 @@
+# Python related
+*.pyc
+__pycache__/
+*.pyo
+*.pyd
+*.pyd
+.Python
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+*.env
+
+# Streamlit specific
+.streamlit/
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints
+
+# VS Code
+.vscode/
+
+# macOS
+.DS_Store
+
+# Thumbnails
+Thumbs.db
+
+# Logs
+logs/
+*.log
+
+# Temporary files
+tmp/
+
+# Ignore video uploads (if any)
+uploads/
+*.mp4
+*.avi
+*.mov
+*.mkv
+
+# Ignore audio files
+*.wav
+*.mp3
+
+# Ignore transcript files
+*.txt
+
+# Ignore ffmpeg binaries (if any)
+ffmpeg/
