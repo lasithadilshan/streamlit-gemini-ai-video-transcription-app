@@ -50,3 +50,6 @@ uploads/
 
 # Ignore ffmpeg binaries (if any)
 ffmpeg/
+
+# Dev Container Configuration
+.devcontainer
