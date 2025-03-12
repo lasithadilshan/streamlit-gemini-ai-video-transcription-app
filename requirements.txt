@@ -5,3 +5,4 @@ ffmpeg-python
 langchain
 faiss-cpu
 langchain-community
+yt-dlp
