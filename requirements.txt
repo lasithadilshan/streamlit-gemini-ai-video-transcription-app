@@ -10,3 +10,4 @@ whisperx
 torchaudio
 pydub
 ffmpeg
+torch
