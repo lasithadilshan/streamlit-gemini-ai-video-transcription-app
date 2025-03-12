@@ -1,12 +1,12 @@
 import streamlit as st
-import os
-import ffmpeg
+import yt_dlp
 import openai
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_community.embeddings import OpenAIEmbeddings
 from langchain_community.vectorstores import FAISS
 from google.generativeai import GenerativeModel
-import yt_dlp
+import subprocess
+import io
 
 # Configure Gemini 2.0 Flash
 model = GenerativeModel("gemini-2.0-flash")
@@ -19,8 +19,8 @@ video_url = st.text_input("Enter Video URL")
 
 if video_url:
     try:
-        # Download Video Audio
-        st.info("Downloading video audio...")
+        # Extract Audio without Downloading
+        st.info("Extracting audio stream...")
         ydl_opts = {
             'format': 'bestaudio/best',
             'postprocessors': [{
@@ -28,20 +28,23 @@ if video_url:
                 'preferredcodec': 'wav',
                 'preferredquality': '192',
             }],
-            'outtmpl': 'meeting_audio.%(ext)s'
+            'outtmpl': '-',  # Pipe output instead of saving
         }
+        
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            ydl.download([video_url])
+            process = subprocess.Popen(
+                ['ffmpeg', '-i', 'pipe:0', '-f', 'wav', '-acodec', 'pcm_s16le', '-ac', '1', '-ar', '16000', 'pipe:1'],
+                stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL
+            )
+            audio_stream, _ = process.communicate(ydl.extract_info(video_url, download=False)['url'].encode())
         
-        audio_path = "meeting_audio.wav"
-        st.success("Audio downloaded successfully!")
-
+        st.success("Audio extracted successfully!")
+        
         # Transcribe using Gemini
-        with open(audio_path, "rb") as audio_file:
-            transcript_response = model.generate_content(audio_file.read())
-            full_transcript = transcript_response.text
+        transcript_response = model.generate_content(audio_stream)
+        full_transcript = transcript_response.text
         
-        # Split Transcript by Speaker (Basic)
+        # Split Transcript by Speaker
         transcript_lines = full_transcript.split("\n")
         speaker_transcripts = {}
         
@@ -73,10 +76,6 @@ if video_url:
                 f.write(f"{speaker}:\n{summary}\n\n")
         
         st.download_button("Download Meeting Minutes", data=open(minutes_file, "rb"), file_name="meeting_minutes.txt", mime="text/plain")
-        
-        # Cleanup
-        os.remove(audio_path)
-        os.remove(minutes_file)
         
         st.success("Meeting minutes generated successfully!")
     except Exception as e:
