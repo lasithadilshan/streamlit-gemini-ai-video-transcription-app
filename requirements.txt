@@ -6,3 +6,7 @@ langchain
 faiss-cpu
 langchain-community
 yt-dlp
+whisperx
+torchaudio
+pydub
+ffmpeg
