@@ -1,5 +1,4 @@
 import streamlit as st
-import tempfile
 import os
 import ffmpeg
 import openai
@@ -7,28 +6,35 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_community.embeddings import OpenAIEmbeddings
 from langchain_community.vectorstores import FAISS
 from google.generativeai import GenerativeModel
+import yt_dlp
 
 # Configure Gemini 2.0 Flash
 model = GenerativeModel("gemini-2.0-flash")
 
 # Streamlit UI
 st.title("📌 MeetingMind AI - Generate Meeting Minutes")
-st.write("Upload a meeting recording to extract summarized minutes per speaker.")
+st.write("Enter a meeting video URL to extract summarized minutes per speaker.")
 
-uploaded_file = st.file_uploader("Upload Meeting Recording", type=["mp4", "avi", "mov", "mkv", "wav", "mp3"])
+video_url = st.text_input("Enter Video URL")
 
-if uploaded_file is not None:
+if video_url:
     try:
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".mp4") as temp_file:
-            temp_file.write(uploaded_file.read())
-            video_path = temp_file.name
+        # Download Video Audio
+        st.info("Downloading video audio...")
+        ydl_opts = {
+            'format': 'bestaudio/best',
+            'postprocessors': [{
+                'key': 'FFmpegExtractAudio',
+                'preferredcodec': 'wav',
+                'preferredquality': '192',
+            }],
+            'outtmpl': 'meeting_audio.%(ext)s'
+        }
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            ydl.download([video_url])
         
-        st.success("File uploaded successfully!")
-
-        # Extract Audio (if video file)
-        audio_path = video_path.replace(".mp4", ".wav")
-        ffmpeg.input(video_path).output(audio_path, format='wav', acodec='pcm_s16le', ac=1, ar='16k').run(overwrite_output=True)
-        st.info("Audio extracted successfully!")
+        audio_path = "meeting_audio.wav"
+        st.success("Audio downloaded successfully!")
 
         # Transcribe using Gemini
         with open(audio_path, "rb") as audio_file:
@@ -69,7 +75,6 @@ if uploaded_file is not None:
         st.download_button("Download Meeting Minutes", data=open(minutes_file, "rb"), file_name="meeting_minutes.txt", mime="text/plain")
         
         # Cleanup
-        os.remove(video_path)
         os.remove(audio_path)
         os.remove(minutes_file)
         
