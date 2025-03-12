@@ -2,6 +2,17 @@ import streamlit as st
 import yt_dlp
 from google.generativeai import GenerativeModel
 
+# --- HIDE STREAMLIT BRANDING ---
+hide_st_style = """
+            <style>
+            #MainMenu {visibility: hidden;}
+            footer {visibility: hidden;}
+            header {visibility: hidden;}
+            ._viewerBadge_nim44_23 {display: none;}  /* Hides "Hosted with Streamlit" */
+            </style>
+            """
+st.markdown(hide_st_style, unsafe_allow_html=True)
+
 # Configure Gemini 2.0 Flash
 model = GenerativeModel("gemini-2.0-flash")
 
