@@ -1,6 +1,11 @@
 import streamlit as st
 import yt_dlp
+import torch
+import whisperx
 from google.generativeai import GenerativeModel
+from pydub import AudioSegment
+import tempfile
+import requests
 
 # Configure Gemini 2.0 Flash
 model = GenerativeModel("gemini-2.0-flash")
@@ -10,6 +15,15 @@ st.title("📌 MeetingMind AI - Generate Meeting Minutes")
 st.write("Enter a meeting video URL to extract summarized minutes per speaker.")
 
 video_url = st.text_input("Enter Video URL")
+
+def download_audio(audio_url):
+    response = requests.get(audio_url, stream=True)
+    temp_audio = tempfile.NamedTemporaryFile(delete=False, suffix=".mp3")
+    with open(temp_audio.name, "wb") as f:
+        for chunk in response.iter_content(chunk_size=1024):
+            if chunk:
+                f.write(chunk)
+    return temp_audio.name
 
 if video_url:
     try:
@@ -29,40 +43,40 @@ if video_url:
         else:
             st.success("Audio stream retrieved successfully!")
             
-            # Transcribe using Gemini
-            transcript_response = model.generate_content(f"Transcribe the following audio: {audio_url}")
-            full_transcript = transcript_response.text
+            # Download and Convert Audio
+            st.info("Processing audio for transcription...")
+            audio_path = download_audio(audio_url)
             
-            # Split Transcript by Speaker
-            transcript_lines = full_transcript.split("\n")
-            speaker_transcripts = {}
+            # Load WhisperX model
+            device = "cuda" if torch.cuda.is_available() else "cpu"
+            model = whisperx.load_model("large-v2", device)
+            diarization_model = whisperx.DiarizationPipeline(device=device)
             
-            for line in transcript_lines:
-                if ":" in line:
-                    speaker, text = line.split(":", 1)
-                    speaker = speaker.strip()
-                    text = text.strip()
-                    if speaker not in speaker_transcripts:
-                        speaker_transcripts[speaker] = []
-                    speaker_transcripts[speaker].append(text)
+            # Transcribe with Speaker Diarization
+            audio = whisperx.load_audio(audio_path)
+            result = model.transcribe(audio)
+            diarization_result = diarization_model(audio, result["segments"])
             
-            # Summarize Meeting Minutes per Speaker
-            meeting_minutes = {}
-            for speaker, texts in speaker_transcripts.items():
-                response = model.generate_content("Summarize these points in bullet format:\n" + "\n".join(texts))
-                meeting_minutes[speaker] = response.text
+            # Extract Speaker Labels
+            transcript = []
+            for segment in diarization_result:
+                speaker = segment["speaker"]
+                text = segment["text"]
+                transcript.append(f"{speaker}: {text}")
+            full_transcript = "\n".join(transcript)
+            
+            # Summarize using Gemini
+            response = model.generate_content("Summarize the following meeting transcript into key points per speaker:\n" + full_transcript)
+            meeting_minutes = response.text
             
             # Display Meeting Minutes
             st.subheader("📝 Meeting Minutes (Summarized)")
-            for speaker, summary in meeting_minutes.items():
-                st.markdown(f"**{speaker}**")
-                st.markdown(summary)
+            st.markdown(meeting_minutes)
             
             # Save Summary
             minutes_file = "meeting_minutes.txt"
             with open(minutes_file, "w") as f:
-                for speaker, summary in meeting_minutes.items():
-                    f.write(f"{speaker}:\n{summary}\n\n")
+                f.write(meeting_minutes)
             
             st.download_button("Download Meeting Minutes", data=open(minutes_file, "rb"), file_name="meeting_minutes.txt", mime="text/plain")
             
