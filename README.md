@@ -1,4 +1,4 @@
-# streamlit-gemini-ai-video-transcription-app
+# Streamlit Gemini AI Video Transcription App
 
 This project is a Streamlit application that allows users to upload video files and generate accurate transcripts using Generative AI.
 
@@ -26,7 +26,7 @@ This project is a Streamlit application that allows users to upload video files 
 
 1. Clone the repository:
     ```sh
-    git clone https://github.com/yourusername/streamlit-gemini-ai-video-transcription-app.git
+    git clone https://github.com/lasithadilshan/streamlit-gemini-ai-video-transcription-app.git
     cd streamlit-gemini-ai-video-transcription-app
     ```
 
